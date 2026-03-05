@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Цветочный рай - мини приложение</title>
+
+    <!-- Telegram Web App SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+    <!-- Font Awesome для иконок -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <!-- Наши стили -->
+    <link rel="stylesheet" href="style.css">
+
+    <style>
+        /* Специфичные стили для цветочного магазина */
+        .bouquet-card {
+            background: var(--tg-secondary-bg);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            transition: transform 0.2s;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .bouquet-card:active {
+            transform: scale(0.98);
+        }
+
+        .bouquet-image {
+            width: 100%;
+            aspect-ratio: 1;
+            object-fit: cover;
+            background: linear-gradient(45deg, #f3f3f3, #e9e9e9);
+        }
+
+        .bouquet-info {
+            padding: 12px;
+        }
+
+        .bouquet-name {
+            font-weight: 600;
+            margin-bottom: 4px;
+            font-size: 15px;
+        }
+
+        .bouquet-composition {
+            font-size: 12px;
+            color: var(--tg-hint);
+            margin-bottom: 4px;
+        }
+
+        .bouquet-size {
+            font-size: 12px;
+            color: var(--tg-hint);
+            margin-bottom: 8px;
+        }
+
+        .bouquet-description {
+            font-size: 12px;
+            color: var(--tg-hint);
+            margin: 8px 0;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .bouquet-price-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 8px;
+        }
+
+        .bouquet-price {
+            font-weight: 700;
+            color: var(--tg-button);
+            font-size: 16px;
+        }
+
+        .add-to-cart {
+            background: var(--tg-button);
+            color: var(--tg-button-text);
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .add-to-cart:active {
+            transform: scale(0.9);
+        }
+
+        .add-to-cart.added {
+            background: var(--success);
+        }
+
+        .bouquet-badge {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: var(--tg-button);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            z-index: 2;
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <!-- Шапка -->
+        <header class="header">
+            <div class="header-content">
+                <h1 class="logo">💐 Цветочный рай</h1>
+                <div class="cart-icon" id="cartIcon">
+                    <i class="fas fa-shopping-cart"></i>
+                    <span class="cart-badge" id="cartBadge">0</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Основной контент -->
+        <main class="main-content">
+            <!-- Категории -->
+            <div class="categories">
+                <button class="category active" data-category="all">Все букеты</button>
+                <button class="category" data-category="roses">Розы</button>
+                <button class="category" data-category="popular">Популярные</button>
+                <button class="category" data-category="new">Новинки</button>
+            </div>
+
+            <!-- Сетка букетов -->
+            <div class="cakes-grid" id="bouquetsGrid">
+                <div class="loading">Загрузка букетов...</div>
+            </div>
+        </main>
+
+        <!-- Панель корзины -->
+        <div class="cart-panel" id="cartPanel">
+            <div class="cart-header">
+                <h2>🛒 Корзина</h2>
+                <button class="close-cart" id="closeCart">&times;</button>
+            </div>
+            <div class="cart-items" id="cartItems">
+                <!-- Товары в корзине -->
+            </div>
+            <div class="cart-footer">
+                <div class="cart-total">
+                    <span>Итого:</span>
+                    <span id="cartTotalPrice">0 ₽</span>
+                </div>
+                <button class="checkout-btn" id="checkoutBtn">Оформить заказ</button>
+            </div>
+        </div>
+
+        <!-- Модальное окно оформления заказа -->
+        <div class="modal" id="checkoutModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>📝 Оформление заказа</h2>
+                    <button class="close-modal" id="closeModal">&times;</button>
+                </div>
+                <form id="orderForm" class="order-form">
+                    <div class="form-group">
+                        <label for="name">Ваше имя *</label>
+                        <input type="text" id="name" required minlength="2" placeholder="Иван Иванов">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="phone">Телефон *</label>
+                        <input type="tel" id="phone" required placeholder="+7 923 456-78-90">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="address">Адрес доставки *</label>
+                        <input type="text" id="address" required placeholder="ул. Кочетова, 25, кв. 42">
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group half">
+                            <label for="deliveryDate">Дата доставки *</label>
+                            <input type="date" id="deliveryDate" required>
+                        </div>
+                        <div class="form-group half">
+                            <label for="deliveryTime">Время *</label>
+                            <input type="time" id="deliveryTime" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="wish">Пожелания к букету</label>
+                        <textarea id="wish" rows="3" placeholder="Открытка, особые пожелания..."></textarea>
+                    </div>
+
+                    <div class="order-summary" id="orderSummary">
+                        <!-- Краткое содержание заказа -->
+                    </div>
+
+                    <button type="submit" class="submit-order">Подтвердить заказ</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Уведомления -->
+        <div class="toast-container" id="toastContainer"></div>
+    </div>
+
+    <!-- Скрипты -->
+    <script src="script.js"></script>
+    <script src="cart.js"></script>
+</body>
+</html>
