@@ -7,7 +7,7 @@ const url = require('url');
 
 const PORT = process.env.PORT || 3000;
 const ADMIN_ID = 1066867845; // ID администратора в Telegram
-const BOT_TOKEN = "8711495102:AAF1PsPMkhLKt6HeyEsi9kwLjdnkUOd3k0I"; // Новый токен для цветочного магазина
+const BOT_TOKEN = "8711495102:AAF1PsPMkhLKt6HeyEsi9kwLjdnkUOd3k0I"; // Токен для цветочного магазина
 
 // MIME типы для статических файлов
 const mimeTypes = {
@@ -31,80 +31,172 @@ const UPLOAD_DIR = path.join(__dirname, 'public', 'uploads');
 // Создаем папку для загрузок, если её нет
 if (!fs.existsSync(UPLOAD_DIR)) {
     fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+    console.log('✅ Папка для загрузок создана');
 }
+
+// Начальные данные для БД
+const getInitialData = () => ({
+    bouquets: [
+        {
+            id: 1,
+            name: 'Нежность',
+            price: 3500,
+            description: 'Нежные розовые пионы с эвкалиптом',
+            photo: 'https://images.unsplash.com/photo-1582794543139-8ac9cb0f7b11?w=400',
+            available: true,
+            composition: 'Пионы, эвкалипт, гипсофила',
+            size: 'Средний (40 см)'
+        },
+        {
+            id: 2,
+            name: 'Красный вечер',
+            price: 4200,
+            description: 'Страстные красные розы в элегантной упаковке',
+            photo: 'https://images.unsplash.com/photo-1548092372-0d1bd40894a3?w=400',
+            available: true,
+            composition: 'Розы красные (15 шт), флористическая сетка',
+            size: 'Большой (50 см)'
+        },
+        {
+            id: 3,
+            name: 'Солнечное настроение',
+            price: 2800,
+            description: 'Яркие подсолнухи и герберы',
+            photo: 'https://images.unsplash.com/photo-1535468850893-d6a71e1c2e4c?w=400',
+            available: true,
+            composition: 'Подсолнухи, герберы, зелень',
+            size: 'Средний (35 см)'
+        },
+        {
+            id: 4,
+            name: 'Лавандовый рай',
+            price: 3900,
+            description: 'Нежная лаванда в композиции с розами',
+            photo: 'https://images.unsplash.com/photo-1468327768560-75b778c92b9c?w=400',
+            available: true,
+            composition: 'Лаванда, розы кустовые, эвкалипт',
+            size: 'Средний (40 см)'
+        }
+    ],
+    orders: [],
+    nextBouquetId: 5,
+    nextOrderId: 1
+});
 
 // Инициализация базы данных
 function initDB() {
-    if (!fs.existsSync(DB_FILE)) {
-        const initialData = {
-            bouquets: [
-                {
-                    id: 1,
-                    name: 'Нежность',
-                    price: 3500,
-                    description: 'Нежные розовые пионы с эвкалиптом',
-                    photo: 'https://images.unsplash.com/photo-1582794543139-8ac9cb0f7b11?w=400',
-                    available: true,
-                    composition: 'Пионы, эвкалипт, гипсофила',
-                    size: 'Средний (40 см)'
-                },
-                {
-                    id: 2,
-                    name: 'Красный вечер',
-                    price: 4200,
-                    description: 'Страстные красные розы в элегантной упаковке',
-                    photo: 'https://images.unsplash.com/photo-1548092372-0d1bd40894a3?w=400',
-                    available: true,
-                    composition: 'Розы красные (15 шт), флористическая сетка',
-                    size: 'Большой (50 см)'
-                },
-                {
-                    id: 3,
-                    name: 'Солнечное настроение',
-                    price: 2800,
-                    description: 'Яркие подсолнухи и герберы',
-                    photo: 'https://images.unsplash.com/photo-1535468850893-d6a71e1c2e4c?w=400',
-                    available: true,
-                    composition: 'Подсолнухи, герберы, зелень',
-                    size: 'Средний (35 см)'
-                },
-                {
-                    id: 4,
-                    name: 'Лавандовый рай',
-                    price: 3900,
-                    description: 'Нежная лаванда в композиции с розами',
-                    photo: 'https://images.unsplash.com/photo-1468327768560-75b778c92b9c?w=400',
-                    available: true,
-                    composition: 'Лаванда, розы кустовые, эвкалипт',
-                    size: 'Средний (40 см)'
-                }
-            ],
-            orders: [],
-            nextBouquetId: 5,
-            nextOrderId: 1
-        };
+    try {
+        // Проверяем, существует ли файл
+        if (!fs.existsSync(DB_FILE)) {
+            // Если файла нет, создаем с начальными данными
+            const initialData = getInitialData();
+            fs.writeFileSync(DB_FILE, JSON.stringify(initialData, null, 2));
+            console.log('✅ База данных создана с начальными данными');
+            return;
+        }
+        
+        // Проверяем, что файл не пустой
+        const stats = fs.statSync(DB_FILE);
+        if (stats.size === 0) {
+            console.log('⚠️ Файл базы данных пустой, создаю новый...');
+            const initialData = getInitialData();
+            fs.writeFileSync(DB_FILE, JSON.stringify(initialData, null, 2));
+            console.log('✅ База данных восстановлена');
+            return;
+        }
+        
+        // Проверяем, что файл содержит валидный JSON
+        const content = fs.readFileSync(DB_FILE, 'utf8');
+        JSON.parse(content);
+        console.log('✅ База данных загружена');
+        
+    } catch (error) {
+        console.error('❌ Ошибка при инициализации БД:', error.message);
+        console.log('🔄 Создаю новую базу данных...');
+        
+        // Создаем резервную копию поврежденного файла, если он существует
+        if (fs.existsSync(DB_FILE) && fs.statSync(DB_FILE).size > 0) {
+            const backupFile = `${DB_FILE}.backup-${Date.now()}`;
+            fs.copyFileSync(DB_FILE, backupFile);
+            console.log(`📦 Создана резервная копия: ${backupFile}`);
+        }
+        
+        // Записываем новые данные
+        const initialData = getInitialData();
         fs.writeFileSync(DB_FILE, JSON.stringify(initialData, null, 2));
+        console.log('✅ База данных восстановлена');
     }
 }
 
-// Чтение данных из БД
+// Чтение данных из БД с защитой от ошибок
 function readDB() {
     try {
-        const data = fs.readFileSync(DB_FILE, 'utf8');
-        return JSON.parse(data);
+        // Проверяем существование файла
+        if (!fs.existsSync(DB_FILE)) {
+            console.log('⚠️ Файл БД не найден, создаю новый...');
+            const initialData = getInitialData();
+            fs.writeFileSync(DB_FILE, JSON.stringify(initialData, null, 2));
+            return initialData;
+        }
+        
+        // Проверяем, не пустой ли файл
+        const stats = fs.statSync(DB_FILE);
+        if (stats.size === 0) {
+            console.log('⚠️ Файл БД пустой, создаю новый...');
+            const initialData = getInitialData();
+            fs.writeFileSync(DB_FILE, JSON.stringify(initialData, null, 2));
+            return initialData;
+        }
+        
+        // Читаем и парсим файл
+        const content = fs.readFileSync(DB_FILE, 'utf8');
+        return JSON.parse(content);
+        
     } catch (error) {
-        console.error('Ошибка чтения БД:', error);
-        return { bouquets: [], orders: [], nextBouquetId: 1, nextOrderId: 1 };
+        console.error('❌ Ошибка чтения БД:', error.message);
+        
+        // В случае ошибки возвращаем данные по умолчанию
+        // и пытаемся восстановить файл
+        const defaultData = getInitialData();
+        
+        try {
+            fs.writeFileSync(DB_FILE, JSON.stringify(defaultData, null, 2));
+            console.log('✅ База данных восстановлена');
+        } catch (writeError) {
+            console.error('❌ Не удалось восстановить БД:', writeError.message);
+        }
+        
+        return defaultData;
     }
 }
 
-// Запись данных в БД
+// Запись данных в БД с проверкой
 function writeDB(data) {
     try {
-        fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
+        // Создаем временный файл для атомарной записи
+        const tempFile = `${DB_FILE}.tmp`;
+        fs.writeFileSync(tempFile, JSON.stringify(data, null, 2));
+        
+        // Проверяем временный файл
+        const verification = fs.readFileSync(tempFile, 'utf8');
+        JSON.parse(verification);
+        
+        // Если всё хорошо, заменяем основной файл
+        fs.renameSync(tempFile, DB_FILE);
+        
         return true;
     } catch (error) {
-        console.error('Ошибка записи БД:', error);
+        console.error('❌ Ошибка записи БД:', error.message);
+        
+        // Удаляем временный файл в случае ошибки
+        try {
+            if (fs.existsSync(`${DB_FILE}.tmp`)) {
+                fs.unlinkSync(`${DB_FILE}.tmp`);
+            }
+        } catch (e) {
+            // Игнорируем ошибки при удалении
+        }
+        
         return false;
     }
 }
@@ -175,7 +267,7 @@ const server = http.createServer((req, res) => {
                     throw new Error('Не удалось извлечь данные файла');
                 }
             } catch (error) {
-                console.error('Ошибка загрузки файла:', error);
+                console.error('❌ Ошибка загрузки файла:', error);
                 res.writeHead(500);
                 res.end(JSON.stringify({ error: 'Ошибка загрузки файла' }));
             }
@@ -244,6 +336,7 @@ const server = http.createServer((req, res) => {
                     throw new Error('Ошибка сохранения');
                 }
             } catch (error) {
+                console.error('❌ Ошибка добавления букета:', error);
                 res.writeHead(500);
                 res.end(JSON.stringify({ error: 'Ошибка сервера' }));
             }
@@ -277,6 +370,7 @@ const server = http.createServer((req, res) => {
                     throw new Error('Ошибка сохранения');
                 }
             } catch (error) {
+                console.error('❌ Ошибка обновления букета:', error);
                 res.writeHead(500);
                 res.end(JSON.stringify({ error: 'Ошибка сервера' }));
             }
@@ -295,34 +389,11 @@ const server = http.createServer((req, res) => {
             const photoPath = path.join(__dirname, 'public', bouquet.photo);
             if (fs.existsSync(photoPath)) {
                 fs.unlinkSync(photoPath);
+                console.log(`📸 Удалено фото: ${bouquet.photo}`);
             }
         }
         
         db.bouquets = db.bouquets.filter(b => b.id !== bouquetId);
-        
-        if (writeDB(db)) {
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ success: true }));
-        } else {
-            res.writeHead(500);
-            res.end(JSON.stringify({ error: 'Ошибка сохранения' }));
-        }
-        return;
-    }
-    
-    // Скрыть букет (сделать недоступным) - используется при заказе
-    if (pathname.startsWith('/api/bouquets/') && pathname.endsWith('/hide') && req.method === 'POST') {
-        const bouquetId = parseInt(pathname.split('/')[3]);
-        const db = readDB();
-        
-        const bouquetIndex = db.bouquets.findIndex(b => b.id === bouquetId);
-        if (bouquetIndex === -1) {
-            res.writeHead(404);
-            res.end(JSON.stringify({ error: 'Букет не найден' }));
-            return;
-        }
-        
-        db.bouquets[bouquetIndex].available = false;
         
         if (writeDB(db)) {
             res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -353,6 +424,7 @@ const server = http.createServer((req, res) => {
                         const bouquetIndex = db.bouquets.findIndex(b => b.id === item.id);
                         if (bouquetIndex !== -1) {
                             db.bouquets[bouquetIndex].available = false;
+                            console.log(`💐 Букет "${db.bouquets[bouquetIndex].name}" скрыт из каталога`);
                         }
                     });
                 }
@@ -380,6 +452,7 @@ const server = http.createServer((req, res) => {
                     throw new Error('Ошибка сохранения');
                 }
             } catch (error) {
+                console.error('❌ Ошибка создания заказа:', error);
                 res.writeHead(500);
                 res.end(JSON.stringify({ error: 'Ошибка сервера' }));
             }
@@ -438,6 +511,7 @@ const server = http.createServer((req, res) => {
                             const bouquetIndex = db.bouquets.findIndex(b => b.id === item.id);
                             if (bouquetIndex !== -1) {
                                 db.bouquets[bouquetIndex].available = true;
+                                console.log(`💐 Букет "${db.bouquets[bouquetIndex].name}" восстановлен в каталоге`);
                             }
                         });
                     }
@@ -452,34 +526,11 @@ const server = http.createServer((req, res) => {
                     throw new Error('Ошибка сохранения');
                 }
             } catch (error) {
+                console.error('❌ Ошибка обновления заказа:', error);
                 res.writeHead(500);
                 res.end(JSON.stringify({ error: 'Ошибка сервера' }));
             }
         });
-        return;
-    }
-    
-    // Восстановить букет (сделать доступным)
-    if (pathname.startsWith('/api/bouquets/') && pathname.endsWith('/restore') && req.method === 'POST') {
-        const bouquetId = parseInt(pathname.split('/')[3]);
-        const db = readDB();
-        
-        const bouquetIndex = db.bouquets.findIndex(b => b.id === bouquetId);
-        if (bouquetIndex === -1) {
-            res.writeHead(404);
-            res.end(JSON.stringify({ error: 'Букет не найден' }));
-            return;
-        }
-        
-        db.bouquets[bouquetIndex].available = true;
-        
-        if (writeDB(db)) {
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ success: true }));
-        } else {
-            res.writeHead(500);
-            res.end(JSON.stringify({ error: 'Ошибка сохранения' }));
-        }
         return;
     }
     
@@ -550,9 +601,9 @@ function sendOrderToAdmin(orderData) {
         `💐 ${item.name} - ${item.price} ₽`
     ).join('\n');
     
-    // Определяем домен для ссылки - ИСПРАВЛЕНО НА flowerdelivery
+    // Определяем домен для ссылки
     const protocol = 'https';
-    const host = 'flowerdelivery.bothost.ru'; // Новый домен для цветочного магазина
+    const host = 'flowerdelivery.bothost.ru'; // Домен для цветочного магазина
     const adminLink = `${protocol}://${host}/admin`;
     const shopLink = `${protocol}://${host}`;
     
@@ -593,8 +644,6 @@ function sendOrderToAdmin(orderData) {
         apiRes.on('data', chunk => data += chunk);
         apiRes.on('end', () => {
             console.log('✅ Уведомление админу отправлено');
-            console.log(`📱 Ссылка на магазин: ${shopLink}`);
-            console.log(`👑 Ссылка на админку: ${adminLink}`);
         });
     });
     
@@ -607,11 +656,15 @@ function sendOrderToAdmin(orderData) {
 }
 
 server.listen(PORT, '0.0.0.0', () => {
-    console.log(`✅ Flower Mini App сервер запущен на порту ${PORT}`);
-    console.log(`📱 Главная страница: http://localhost:${PORT}`);
-    console.log(`👑 Админ-панель: http://localhost:${PORT}/admin`);
-    console.log(`💾 Данные сохраняются в: ${DB_FILE}`);
-    console.log(`📸 Загрузки сохраняются в: ${UPLOAD_DIR}`);
-    console.log(`🔑 Токен бота: ${BOT_TOKEN.substring(0, 10)}...`);
+    console.log('\n' + '='.repeat(50));
+    console.log('✅ Flower Mini App сервер запущен');
+    console.log('='.repeat(50));
+    console.log(`📱 Порт: ${PORT}`);
     console.log(`🌐 Домен: flowerdelivery.bothost.ru`);
+    console.log(`👑 Админ панель: https://flowerdelivery.bothost.ru/admin`);
+    console.log(`💾 База данных: ${DB_FILE}`);
+    console.log(`📸 Папка загрузок: ${UPLOAD_DIR}`);
+    console.log(`🔑 Токен бота: ${BOT_TOKEN.substring(0, 10)}...`);
+    console.log('='.repeat(50));
 });
+
