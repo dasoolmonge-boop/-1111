@@ -7,7 +7,7 @@ const url = require('url');
 
 const PORT = process.env.PORT || 3000;
 const ADMIN_ID = 1066867845; // ID администратора в Telegram
-const BOT_TOKEN = "8714739961:AAG9l-7-G7duRNKuNtarP7rTchfvZQFCMxo"; // Токен для уведомлений
+const BOT_TOKEN = "8711495102:AAF1PsPMkhLKt6HeyEsi9kwLjdnkUOd3k0I"; // Новый токен для цветочного магазина
 
 // MIME типы для статических файлов
 const mimeTypes = {
@@ -43,7 +43,7 @@ function initDB() {
                     name: 'Нежность',
                     price: 3500,
                     description: 'Нежные розовые пионы с эвкалиптом',
-                    photo: '/uploads/negnost.jpg',
+                    photo: 'https://images.unsplash.com/photo-1582794543139-8ac9cb0f7b11?w=400',
                     available: true,
                     composition: 'Пионы, эвкалипт, гипсофила',
                     size: 'Средний (40 см)'
@@ -53,7 +53,7 @@ function initDB() {
                     name: 'Красный вечер',
                     price: 4200,
                     description: 'Страстные красные розы в элегантной упаковке',
-                    photo: '/uploads/red-evening.jpg',
+                    photo: 'https://images.unsplash.com/photo-1548092372-0d1bd40894a3?w=400',
                     available: true,
                     composition: 'Розы красные (15 шт), флористическая сетка',
                     size: 'Большой (50 см)'
@@ -63,7 +63,7 @@ function initDB() {
                     name: 'Солнечное настроение',
                     price: 2800,
                     description: 'Яркие подсолнухи и герберы',
-                    photo: '/uploads/sunny.jpg',
+                    photo: 'https://images.unsplash.com/photo-1535468850893-d6a71e1c2e4c?w=400',
                     available: true,
                     composition: 'Подсолнухи, герберы, зелень',
                     size: 'Средний (35 см)'
@@ -73,7 +73,7 @@ function initDB() {
                     name: 'Лавандовый рай',
                     price: 3900,
                     description: 'Нежная лаванда в композиции с розами',
-                    photo: '/uploads/lavender.jpg',
+                    photo: 'https://images.unsplash.com/photo-1468327768560-75b778c92b9c?w=400',
                     available: true,
                     composition: 'Лаванда, розы кустовые, эвкалипт',
                     size: 'Средний (40 см)'
@@ -114,62 +114,62 @@ initDB();
 
 const server = http.createServer((req, res) => {
     console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-
+    
     // CORS headers
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
+    
     if (req.method === 'OPTIONS') {
         res.writeHead(200);
         res.end();
         return;
     }
-
+    
     const parsedUrl = url.parse(req.url, true);
     const pathname = parsedUrl.pathname;
-
+    
     // ============================================
     // API ДЛЯ ЗАГРУЗКИ ФОТО
     // ============================================
-
+    
     if (pathname === '/api/upload' && req.method === 'POST') {
         const boundary = req.headers['content-type'].split('boundary=')[1];
         let body = [];
-
+        
         req.on('data', chunk => {
             body.push(chunk);
         }).on('end', () => {
             try {
                 const buffer = Buffer.concat(body);
-
+                
                 // Ищем имя файла
                 const text = buffer.toString('binary');
                 const filenameMatch = text.match(/filename="(.+?)"/);
                 const filename = filenameMatch ? filenameMatch[1] : `photo_${Date.now()}.jpg`;
-
+                
                 // Ищем содержимое файла
                 const fileDataStart = buffer.indexOf('\r\n\r\n') + 4;
                 const fileDataEnd = buffer.lastIndexOf('\r\n--' + boundary);
-
+                
                 if (fileDataStart !== -1 && fileDataEnd !== -1) {
                     const fileData = buffer.slice(fileDataStart, fileDataEnd);
-
+                    
                     // Генерируем уникальное имя файла
                     const ext = path.extname(filename) || '.jpg';
                     const newFilename = `flower_${Date.now()}${ext}`;
                     const filePath = path.join(UPLOAD_DIR, newFilename);
-
+                    
                     // Сохраняем файл
                     fs.writeFileSync(filePath, fileData);
-
+                    
                     const fileUrl = `/uploads/${newFilename}`;
-
+                    
                     res.writeHead(200, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({
-                        success: true,
+                    res.end(JSON.stringify({ 
+                        success: true, 
                         url: fileUrl,
-                        filename: newFilename
+                        filename: newFilename 
                     }));
                 } else {
                     throw new Error('Не удалось извлечь данные файла');
@@ -182,11 +182,11 @@ const server = http.createServer((req, res) => {
         });
         return;
     }
-
+    
     // ============================================
     // API ДЛЯ БУКЕТОВ
     // ============================================
-
+    
     // Получить все доступные букеты (для клиентов)
     if (pathname === '/api/bouquets' && req.method === 'GET') {
         const db = readDB();
@@ -195,7 +195,7 @@ const server = http.createServer((req, res) => {
         res.end(JSON.stringify(availableBouquets));
         return;
     }
-
+    
     // Получить все букеты (для админа)
     if (pathname === '/api/admin/bouquets' && req.method === 'GET') {
         const db = readDB();
@@ -203,13 +203,13 @@ const server = http.createServer((req, res) => {
         res.end(JSON.stringify(db.bouquets));
         return;
     }
-
+    
     // Получить конкретный букет
     if (pathname.startsWith('/api/bouquets/') && req.method === 'GET') {
         const bouquetId = parseInt(pathname.split('/').pop());
         const db = readDB();
         const bouquet = db.bouquets.find(b => b.id === bouquetId);
-
+        
         if (bouquet) {
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify(bouquet));
@@ -219,7 +219,7 @@ const server = http.createServer((req, res) => {
         }
         return;
     }
-
+    
     // Добавить новый букет (админ)
     if (pathname === '/api/admin/bouquets' && req.method === 'POST') {
         let body = '';
@@ -228,15 +228,15 @@ const server = http.createServer((req, res) => {
             try {
                 const bouquetData = JSON.parse(body);
                 const db = readDB();
-
+                
                 const newBouquet = {
                     id: db.nextBouquetId++,
                     ...bouquetData,
                     available: true
                 };
-
+                
                 db.bouquets.push(newBouquet);
-
+                
                 if (writeDB(db)) {
                     res.writeHead(201, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify(newBouquet));
@@ -250,7 +250,7 @@ const server = http.createServer((req, res) => {
         });
         return;
     }
-
+    
     // Обновить букет (админ)
     if (pathname.startsWith('/api/admin/bouquets/') && req.method === 'PUT') {
         const bouquetId = parseInt(pathname.split('/').pop());
@@ -260,16 +260,16 @@ const server = http.createServer((req, res) => {
             try {
                 const updates = JSON.parse(body);
                 const db = readDB();
-
+                
                 const bouquetIndex = db.bouquets.findIndex(b => b.id === bouquetId);
                 if (bouquetIndex === -1) {
                     res.writeHead(404);
                     res.end(JSON.stringify({ error: 'Букет не найден' }));
                     return;
                 }
-
+                
                 db.bouquets[bouquetIndex] = { ...db.bouquets[bouquetIndex], ...updates };
-
+                
                 if (writeDB(db)) {
                     res.writeHead(200, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify(db.bouquets[bouquetIndex]));
@@ -283,12 +283,12 @@ const server = http.createServer((req, res) => {
         });
         return;
     }
-
+    
     // Удалить букет (админ)
     if (pathname.startsWith('/api/admin/bouquets/') && req.method === 'DELETE') {
         const bouquetId = parseInt(pathname.split('/').pop());
         const db = readDB();
-
+        
         // Удаляем фото букета
         const bouquet = db.bouquets.find(b => b.id === bouquetId);
         if (bouquet && bouquet.photo && bouquet.photo.startsWith('/uploads/')) {
@@ -297,9 +297,9 @@ const server = http.createServer((req, res) => {
                 fs.unlinkSync(photoPath);
             }
         }
-
+        
         db.bouquets = db.bouquets.filter(b => b.id !== bouquetId);
-
+        
         if (writeDB(db)) {
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ success: true }));
@@ -309,21 +309,21 @@ const server = http.createServer((req, res) => {
         }
         return;
     }
-
+    
     // Скрыть букет (сделать недоступным) - используется при заказе
     if (pathname.startsWith('/api/bouquets/') && pathname.endsWith('/hide') && req.method === 'POST') {
         const bouquetId = parseInt(pathname.split('/')[3]);
         const db = readDB();
-
+        
         const bouquetIndex = db.bouquets.findIndex(b => b.id === bouquetId);
         if (bouquetIndex === -1) {
             res.writeHead(404);
             res.end(JSON.stringify({ error: 'Букет не найден' }));
             return;
         }
-
+        
         db.bouquets[bouquetIndex].available = false;
-
+        
         if (writeDB(db)) {
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ success: true }));
@@ -333,11 +333,11 @@ const server = http.createServer((req, res) => {
         }
         return;
     }
-
+    
     // ============================================
     // API ДЛЯ ЗАКАЗОВ
     // ============================================
-
+    
     // Создать заказ
     if (pathname === '/api/orders' && req.method === 'POST') {
         let body = '';
@@ -346,7 +346,7 @@ const server = http.createServer((req, res) => {
             try {
                 const orderData = JSON.parse(body);
                 const db = readDB();
-
+                
                 // Помечаем каждый букет в заказе как недоступный
                 if (orderData.cart && orderData.cart.length > 0) {
                     orderData.cart.forEach(item => {
@@ -356,23 +356,23 @@ const server = http.createServer((req, res) => {
                         }
                     });
                 }
-
+                
                 const newOrder = {
                     id: db.nextOrderId++,
                     ...orderData,
                     status: 'active',
                     createdAt: new Date().toISOString()
                 };
-
+                
                 db.orders.push(newOrder);
-
+                
                 if (writeDB(db)) {
                     // Отправляем уведомление админу в Telegram
                     sendOrderToAdmin(newOrder);
-
+                    
                     res.writeHead(201, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({
-                        success: true,
+                    res.end(JSON.stringify({ 
+                        success: true, 
                         orderId: newOrder.id,
                         message: 'Букеты скрыты из каталога'
                     }));
@@ -386,7 +386,7 @@ const server = http.createServer((req, res) => {
         });
         return;
     }
-
+    
     // Получить все заказы (админ)
     if (pathname === '/api/admin/orders' && req.method === 'GET') {
         const db = readDB();
@@ -394,25 +394,25 @@ const server = http.createServer((req, res) => {
         res.end(JSON.stringify(db.orders));
         return;
     }
-
+    
     // Получить активные заказы (админ)
     if (pathname === '/api/admin/orders/active' && req.method === 'GET') {
         const db = readDB();
-        const activeOrders = db.orders.filter(o => o.status === 'active');
+        const activeOrders = db.orders.filter(o => o.status === 'active' || o.status === 'processing');
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(activeOrders));
         return;
     }
-
+    
     // Получить историю заказов (админ)
     if (pathname === '/api/admin/orders/history' && req.method === 'GET') {
         const db = readDB();
-        const historyOrders = db.orders.filter(o => o.status !== 'active');
+        const historyOrders = db.orders.filter(o => o.status === 'completed' || o.status === 'cancelled');
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(historyOrders));
         return;
     }
-
+    
     // Обновить статус заказа (админ)
     if (pathname.startsWith('/api/admin/orders/') && req.method === 'PUT') {
         const orderId = parseInt(pathname.split('/').pop());
@@ -422,14 +422,14 @@ const server = http.createServer((req, res) => {
             try {
                 const updates = JSON.parse(body);
                 const db = readDB();
-
+                
                 const orderIndex = db.orders.findIndex(o => o.id === orderId);
                 if (orderIndex === -1) {
                     res.writeHead(404);
                     res.end(JSON.stringify({ error: 'Заказ не найден' }));
                     return;
                 }
-
+                
                 // Если заказ отменяют, возвращаем букеты в доступные
                 if (updates.status === 'cancelled') {
                     const order = db.orders[orderIndex];
@@ -442,9 +442,9 @@ const server = http.createServer((req, res) => {
                         });
                     }
                 }
-
+                
                 db.orders[orderIndex] = { ...db.orders[orderIndex], ...updates };
-
+                
                 if (writeDB(db)) {
                     res.writeHead(200, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify(db.orders[orderIndex]));
@@ -458,21 +458,21 @@ const server = http.createServer((req, res) => {
         });
         return;
     }
-
+    
     // Восстановить букет (сделать доступным)
     if (pathname.startsWith('/api/bouquets/') && pathname.endsWith('/restore') && req.method === 'POST') {
         const bouquetId = parseInt(pathname.split('/')[3]);
         const db = readDB();
-
+        
         const bouquetIndex = db.bouquets.findIndex(b => b.id === bouquetId);
         if (bouquetIndex === -1) {
             res.writeHead(404);
             res.end(JSON.stringify({ error: 'Букет не найден' }));
             return;
         }
-
+        
         db.bouquets[bouquetIndex].available = true;
-
+        
         if (writeDB(db)) {
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ success: true }));
@@ -482,7 +482,7 @@ const server = http.createServer((req, res) => {
         }
         return;
     }
-
+    
     // Проверка прав администратора
     if (pathname === '/api/check-admin' && req.method === 'POST') {
         let body = '';
@@ -500,11 +500,11 @@ const server = http.createServer((req, res) => {
         });
         return;
     }
-
+    
     // ============================================
     // РАЗДАЧА СТАТИЧЕСКИХ ФАЙЛОВ
     // ============================================
-
+    
     // Определяем, какой файл отдавать
     let filePath;
     if (pathname === '/') {
@@ -514,10 +514,10 @@ const server = http.createServer((req, res) => {
     } else {
         filePath = path.join(__dirname, 'public', pathname);
     }
-
+    
     const extname = path.extname(filePath);
     const contentType = mimeTypes[extname] || 'text/plain';
-
+    
     fs.readFile(filePath, (error, content) => {
         if (error) {
             if (error.code === 'ENOENT') {
@@ -545,17 +545,18 @@ const server = http.createServer((req, res) => {
 // Функция отправки уведомления админу
 function sendOrderToAdmin(orderData) {
     const { name, phone, address, deliveryDate, deliveryTime, wish, cart, totalPrice, userId, username } = orderData;
-
+    
     const bouquetsList = cart.map(item =>
         `💐 ${item.name} - ${item.price} ₽`
     ).join('\n');
-
-    // Определяем домен для ссылки
+    
+    // Определяем домен для ссылки - ИСПРАВЛЕНО НА flowerdelivery
     const protocol = 'https';
-    const host = 'flower-shop.bothost.ru'; // ЗАМЕНИТЕ НА ВАШ РЕАЛЬНЫЙ ДОМЕН
+    const host = 'flowerdelivery.bothost.ru'; // Новый домен для цветочного магазина
     const adminLink = `${protocol}://${host}/admin`;
-
-    const message =
+    const shopLink = `${protocol}://${host}`;
+    
+    const message = 
         `📩 **НОВЫЙ ЗАКАЗ ЦВЕТОВ**\n\n` +
         `💐 **Букеты:**\n${bouquetsList}\n` +
         `💰 **Итого:** ${totalPrice} ₽\n\n` +
@@ -568,14 +569,15 @@ function sendOrderToAdmin(orderData) {
         `📝 **Пожелания:** ${wish || 'Без пожеланий'}\n` +
         `🆔 **User ID:** ${userId}\n` +
         `📅 **Дата заказа:** ${new Date().toLocaleString('ru-RU')}\n\n` +
-        `👑 **Управление заказами:** ${adminLink}`;
-
+        `👑 **Управление заказами:** ${adminLink}\n` +
+        `🏪 **Магазин:** ${shopLink}`;
+    
     const postData = JSON.stringify({
         chat_id: ADMIN_ID,
         text: message,
         parse_mode: 'Markdown'
     });
-
+    
     const options = {
         hostname: 'api.telegram.org',
         path: `/bot${BOT_TOKEN}/sendMessage`,
@@ -585,19 +587,21 @@ function sendOrderToAdmin(orderData) {
             'Content-Length': Buffer.byteLength(postData)
         }
     };
-
+    
     const req = https.request(options, (apiRes) => {
         let data = '';
         apiRes.on('data', chunk => data += chunk);
         apiRes.on('end', () => {
-            console.log('Уведомление админу отправлено');
+            console.log('✅ Уведомление админу отправлено');
+            console.log(`📱 Ссылка на магазин: ${shopLink}`);
+            console.log(`👑 Ссылка на админку: ${adminLink}`);
         });
     });
-
+    
     req.on('error', (error) => {
-        console.error('Ошибка отправки уведомления:', error);
+        console.error('❌ Ошибка отправки уведомления:', error);
     });
-
+    
     req.write(postData);
     req.end();
 }
@@ -608,4 +612,6 @@ server.listen(PORT, '0.0.0.0', () => {
     console.log(`👑 Админ-панель: http://localhost:${PORT}/admin`);
     console.log(`💾 Данные сохраняются в: ${DB_FILE}`);
     console.log(`📸 Загрузки сохраняются в: ${UPLOAD_DIR}`);
+    console.log(`🔑 Токен бота: ${BOT_TOKEN.substring(0, 10)}...`);
+    console.log(`🌐 Домен: flowerdelivery.bothost.ru`);
 });
